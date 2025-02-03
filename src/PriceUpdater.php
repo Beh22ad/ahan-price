@@ -126,7 +126,7 @@ class PriceUpdater {
 				} elseif ($currency === 'IRT') {
 					// تقسیم بر 10 و رند به نزدیک‌ترین 100 برای تومان
 					$api_price = $api_price / 10;
-					$api_price = round($api_price / 100) * 100;
+					$api_price = round($api_price / 10) * 10;
 				}
 
                 $last_price_date = str_replace('-', '/', $item['تاریخ اخرین قیمت']); // تاریخ اخرین قیمت

@@ -76,6 +76,7 @@ class PriceUpdater {
         wp_send_json_success('Product updated');
     }
 
+
     private function process_product($product_id) {
         $product_code = get_post_meta($product_id, '_ahan_product_code', true);
         if (empty($product_code)) {
@@ -94,7 +95,10 @@ class PriceUpdater {
         if (false === $data) {
             $api_key = get_option('ahan_price_key');
             $api_url = "https://ahan-price-api.spaindoh.workers.dev/?auth={$api_key}&id={$base_code}";
+            $this->log("api url = ".$api_url );
             $response = wp_remote_get($api_url);
+
+            //$this->log("response = ". print_r($response, true) );
 
             if (is_wp_error($response)) {
                 $this->log("API request failed for product {$product_id}: " . $response->get_error_message());
@@ -133,12 +137,18 @@ class PriceUpdater {
 
                 // Calculate the adjusted price
                 $price_adjustment = get_post_meta($product_id, '_ahan_price_adjustment', true);
-                if (!empty($price_adjustment)) {
-                    $adjusted_price = eval('return ' . str_replace('{price}', $api_price, $price_adjustment) . ';');
-                } else {
-                    $adjusted_price = $api_price;
-                }
 
+                if (!empty($price_adjustment)) {
+                        try {
+                            $adjusted_price = eval('return ' . str_replace('{price}', $api_price, $price_adjustment) . ';');
+                        } catch (Throwable $e) {
+                            // Log the error if needed
+                            $this->log('Price adjustment eval error: ' . $e->getMessage());
+                            $adjusted_price = $api_price;
+                        }
+                    } else {
+                        $adjusted_price = $api_price;
+                    }
                 // Update product price
                 update_post_meta($product_id, '_price', $adjusted_price);
                 update_post_meta($product_id, '_regular_price', $adjusted_price);

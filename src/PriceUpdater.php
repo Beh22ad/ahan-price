@@ -120,8 +120,10 @@ class PriceUpdater {
         // Find the matching product in the API response
         foreach ($data['data'] as $item) {
             if ($item['id'] === $product_code) {
-                // Access the price and last price date using Persian keys
-                $api_price = $item['قیمت']; // قیمت
+                // Access the price, last price date and 24h change
+                $api_price = $item['قیمت'];
+                $last_price_date = str_replace('-', '/', $item['تاریخ اخرین قیمت']);
+                $change_24h = $item['24h']; // Get the 24h change value
 
                 		// اعمال تغییرات بر اساس واحد پول
 				if ($currency === 'IRR') {
@@ -133,7 +135,6 @@ class PriceUpdater {
 					$api_price = round($api_price / 10) * 10;
 				}
 
-                $last_price_date = str_replace('-', '/', $item['تاریخ اخرین قیمت']); // تاریخ اخرین قیمت
 
                 // Calculate the adjusted price
                 $price_adjustment = get_post_meta($product_id, '_ahan_price_adjustment', true);
@@ -156,6 +157,9 @@ class PriceUpdater {
                 // Update last price date
                 update_post_meta($product_id, '_ahan_last_price_date', $last_price_date);
 
+                // Update 24h change
+                update_post_meta($product_id, '_ahan_24h_change', $change_24h);
+
                 // Update next update date using Persian calendar and Iran time
                 $jalaliDate = DateConverter::gregorianToJalali(date('Y'), date('m'), date('d'), '/');
                 date_default_timezone_set('Asia/Tehran');
@@ -163,7 +167,7 @@ class PriceUpdater {
                 $next_update_date = $jalaliDate." ($iranTime)"; // Persian date format
                 update_post_meta($product_id, '_ahan_next_update', $next_update_date);
 
-                $this->log("Product {$product_id} updated: Price = {$adjusted_price}, Last Price Date = {$last_price_date}, Next Update Date = {$next_update_date}");
+                $this->log("Product {$product_id} updated: Price = {$adjusted_price}, Last Price Date = {$last_price_date}, 24h Change = {$change_24h}, Next Update Date = {$next_update_date}");
                 break;
             }
         }

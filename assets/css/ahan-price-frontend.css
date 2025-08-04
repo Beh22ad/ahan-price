@@ -1,0 +1,12 @@
+.ahan-change{
+    direction: ltr;
+}
+.ahan-no-changes {
+    color: unset;  
+}
+.ahan-increase {
+    color: rgb(28 163 78 / 1);
+}
+.ahan-decrease {
+    color: rgb(201 19 0 / 1);
+}

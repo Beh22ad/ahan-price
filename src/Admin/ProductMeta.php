@@ -17,6 +17,7 @@ class ProductMeta {
         add_action('woocommerce_process_product_meta', [$this, 'save_product_meta']);
         add_action('admin_head', [$this, 'custom_admin_css']);
         add_shortcode('ahan-date', [$this, 'ahan_date_shortcode']);
+        add_shortcode('ahan-change', [$this, 'ahan_change_shortcode']);
     }
 
     public function add_product_tab($tabs) {
@@ -69,10 +70,21 @@ class ProductMeta {
                     'id'    => '_ahan_last_price_date',
                     'label' => 'قیمت برای:',
                     'type'  => 'text',
-                    'description' => 'شورتکد تاریخ:<code>[ahan-date code=""]</code>',
+                    'description' => 'شورتکد تاریخ:<code>[ahan-date]</code>',
                     'disabled' => true,
                     'class' => 'ltr-input',
                 ]);
+
+                // New 24h change field (disabled)
+                woocommerce_wp_text_input([
+                    'id'    => '_ahan_24h_change',
+                    'label' => 'نوسانات:',
+                    'type'  => 'text',
+                    'description' => 'شورتکد نوسانات:<code>[ahan-change]</code>',
+                    'disabled' => true,
+                    'class' => 'ltr-input',
+                ]);
+
 
                 // Next update date (disabled)
                 woocommerce_wp_text_input([
@@ -105,37 +117,103 @@ class ProductMeta {
     }
 
 
-
     /**
      * Shortcode to display the last price date.
      *
      * @param array $atts Shortcode attributes.
      * @return string The last price date.
      */
-    public function ahan_date_shortcode($atts) {
-        $atts = shortcode_atts([
-            'code' => '', // Default code is empty
-        ], $atts, 'ahan-date');
+    public function ahan_date_shortcode() {
+    // Enqueue CSS
+    wp_enqueue_style(
+        'ahan-price-frontend-style',
+        plugin_dir_url(__DIR__) . '../assets/css/ahan-price-frontend.css',
+        [],
+        '1.0.0'
+    );
 
-        // If on a single product page, ignore the code attribute and get the current product's last price date
-        if (is_product()) {
-            global $post;
-            $product_id = $post->ID;
-            $last_price_date = get_post_meta($product_id, '_ahan_last_price_date', true);
-            return '<p class="ahan-update-date">'.$last_price_date.'</p>';
+    // Get product ID
+    $product_id = 0;
+
+    if (is_product()) {
+        global $post;
+        $product_id = $post->ID;
+    } elseif (function_exists('wc_get_product')) {
+        global $product;
+        if ($product && is_object($product)) {
+            $product_id = $product->get_id();
         }
+    }
 
-        // If not on a single product page, use the code attribute to find the product
-        if (!empty($atts['code'])) {
-            $product_id = $this->get_product_id_by_code($atts['code']);
-            if ($product_id) {
-                $last_price_date = get_post_meta($product_id, '_ahan_last_price_date', true);
-                return '<p class="ahan-update-date">'.$last_price_date.'</p>';
-            }
-        }
-
+    if (!$product_id) {
         return '<p class="ahan-update-date">نامشخص</p>';
     }
+
+    $last_price_date = get_post_meta($product_id, '_ahan_last_price_date', true);
+
+    if (!empty($last_price_date)) {
+        return '<p class="ahan-update-date">' . esc_html($last_price_date) . '</p>';
+    }
+
+    return '<p class="ahan-update-date">نامشخص</p>';
+}
+
+
+
+    /**
+     * Shortcode to display the 24h change.
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string The 24h change.
+     */
+    public function ahan_change_shortcode() {
+    // Enqueue CSS
+    wp_enqueue_style(
+        'ahan-price-frontend-style',
+        plugin_dir_url(__DIR__) . '../assets/css/ahan-price-frontend.css',
+        [],
+        '1.0.0'
+    );
+
+    // Get product ID
+    $product_id = 0;
+
+    if (is_product()) {
+        global $post;
+        $product_id = $post->ID;
+    } elseif (function_exists('wc_get_product')) {
+        global $product;
+        if ($product && is_object($product)) {
+            $product_id = $product->get_id();
+        }
+    }
+
+    if (!$product_id) {
+        return ''; // No product found
+    }
+
+    $change_value = get_post_meta($product_id, '_ahan_24h_change', true);
+
+    if (empty($change_value) || $change_value == '0') {
+        return '<p class="ahan-change ahan-no-changes">۰.۰%</p>';
+    }
+
+    $formatted_value = floatval($change_value);
+    $en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    $fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $display_value = str_replace($en, $fa, $change_value);
+
+    if ($formatted_value > 0) {
+        return '<p class="ahan-change ahan-increase">+' . esc_html($display_value) . '%</p>';
+    } elseif ($formatted_value < 0) {
+        return '<p class="ahan-change ahan-decrease">' . esc_html($display_value) . '%</p>';
+    }
+
+    return '<p class="ahan-change ahan-no-changes">۰.۰%</p>';
+}
+
+
+
 
     /**
      * Get product ID by product code.
@@ -204,7 +282,4 @@ class ProductMeta {
         </style>
         <?php
     }
-
-
-
 }

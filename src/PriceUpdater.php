@@ -18,14 +18,7 @@ class PriceUpdater {
     }
 
     public function update_product() {
-
-
-        // Verify nonce
-       // check_ajax_referer('ahan_price',  '_ajax_nonce');
-
-
-
-        // Get product IDs
+        // Get product IDs from transient
         $product_ids = get_transient('ahan_products_ids');
         if (false === $product_ids) {
             // Get all products with auto-update enabled
@@ -52,7 +45,15 @@ class PriceUpdater {
 
         // Process the first product
         $product_id = array_shift($product_ids);
-        $this->process_product($product_id);
+        $product_obj = wc_get_product($product_id);
+
+        if ($product_obj) {
+            if ($product_obj->is_type('variable')) {
+                $this->process_variable_product($product_obj);
+            } else {
+                $this->process_single_product($product_obj);
+            }
+        }
 
         // Update the transient with remaining product IDs
         set_transient('ahan_products_ids', $product_ids, HOUR_IN_SECONDS);
@@ -65,7 +66,6 @@ class PriceUpdater {
                 'headers' => array('X-Requested-With' => 'XMLHttpRequest'),
                 'body' => [
                     'action' => 'ahan_price_update_product',
-                    'nonce'  => wp_create_nonce('ahan_price_update_nonce'),
                 ],
             ]);
         } else {
@@ -76,9 +76,24 @@ class PriceUpdater {
         wp_send_json_success('Product updated');
     }
 
+    private function process_variable_product($product_obj) {
+        $variation_ids = $product_obj->get_children();
 
-    private function process_product($product_id) {
+        foreach ($variation_ids as $variation_id) {
+            $variation_obj = wc_get_product($variation_id);
+            if ($variation_obj) {
+                // Get the parent product ID from the variation
+                $parent_id = $variation_obj->get_parent_id();
+                // Process the variation as a single product, and pass the parent ID to update the date on it
+                $this->process_single_product($variation_obj, $parent_id);
+            }
+        }
+    }
+
+    private function process_single_product($product_or_variation_obj, $parent_id = null) {
+        $product_id = $product_or_variation_obj->get_id();
         $product_code = get_post_meta($product_id, '_ahan_product_code', true);
+
         if (empty($product_code)) {
             $this->log("Product {$product_id} skipped: No product code found");
             return;
@@ -98,8 +113,6 @@ class PriceUpdater {
             $this->log("api url = ".$api_url );
             $response = wp_remote_get($api_url);
 
-            //$this->log("response = ". print_r($response, true) );
-
             if (is_wp_error($response)) {
                 $this->log("API request failed for product {$product_id}: " . $response->get_error_message());
                 return;
@@ -110,12 +123,10 @@ class PriceUpdater {
         }
 
         $data = json_decode($data, true);
-        if ($data['status'] !== 'ok') {
+        if (!isset($data['status']) || $data['status'] !== 'ok') {
             $this->log("API response status is not OK for product {$product_id}");
             return;
         }
-
-        $currency = get_woocommerce_currency();
 
         // Find the matching product in the API response
         foreach ($data['data'] as $item) {
@@ -124,48 +135,44 @@ class PriceUpdater {
                 $api_price = $item['قیمت'];
                 $last_price_date = str_replace('-', '/', $item['تاریخ اخرین قیمت']);
                 $change_24h = $item['24h']; // Get the 24h change value
+                $currency = get_woocommerce_currency();
 
-                		// اعمال تغییرات بر اساس واحد پول
-				if ($currency === 'IRR') {
-					// رند به نزدیک‌ترین 100 برای ریال
-					$api_price = round($api_price / 100) * 100;
-				} elseif ($currency === 'IRT') {
-					// تقسیم بر 10 و رند به نزدیک‌ترین 100 برای تومان
-					$api_price = $api_price / 10;
-					$api_price = round($api_price / 10) * 10;
-				}
-
+                // Apply currency rules
+                if ($currency === 'IRR') {
+                    $api_price = round($api_price / 100) * 100;
+                } elseif ($currency === 'IRT') {
+                    $api_price = $api_price / 10;
+                    $api_price = round($api_price / 10) * 10;
+                }
 
                 // Calculate the adjusted price
                 $price_adjustment = get_post_meta($product_id, '_ahan_price_adjustment', true);
-
                 if (!empty($price_adjustment)) {
-                        try {
-                            $adjusted_price = eval('return ' . str_replace('{price}', $api_price, $price_adjustment) . ';');
-                        } catch (Throwable $e) {
-                            // Log the error if needed
-                            $this->log('Price adjustment eval error: ' . $e->getMessage());
-                            $adjusted_price = $api_price;
-                        }
-                    } else {
+                    try {
+                        $adjusted_price = eval('return ' . str_replace('{price}', $api_price, $price_adjustment) . ';');
+                    } catch (\Throwable $e) {
+                        $this->log('Price adjustment eval error: ' . $e->getMessage());
                         $adjusted_price = $api_price;
                     }
+                } else {
+                    $adjusted_price = $api_price;
+                }
+
                 // Update product price
                 update_post_meta($product_id, '_price', $adjusted_price);
                 update_post_meta($product_id, '_regular_price', $adjusted_price);
-
-                // Update last price date
-                update_post_meta($product_id, '_ahan_last_price_date', $last_price_date);
-
-                // Update 24h change
                 update_post_meta($product_id, '_ahan_24h_change', $change_24h);
-
+                
                 // Update next update date using Persian calendar and Iran time
                 $jalaliDate = DateConverter::gregorianToJalali(date('Y'), date('m'), date('d'), '/');
                 date_default_timezone_set('Asia/Tehran');
                 $iranTime = date('H:i');
-                $next_update_date = $jalaliDate." ($iranTime)"; // Persian date format
-                update_post_meta($product_id, '_ahan_next_update', $next_update_date);
+                $next_update_date = $jalaliDate." ($iranTime)";
+                
+                // Determine which post ID to update for the last price date
+                $date_update_id = $parent_id ? $parent_id : $product_id;
+                update_post_meta($date_update_id, '_ahan_last_price_date', $last_price_date);
+                update_post_meta($date_update_id, '_ahan_next_update', $next_update_date);
 
                 $this->log("Product {$product_id} updated: Price = {$adjusted_price}, Last Price Date = {$last_price_date}, 24h Change = {$change_24h}, Next Update Date = {$next_update_date}");
                 break;
@@ -174,22 +181,21 @@ class PriceUpdater {
     }
 
     private function delete_all_transients() {
-    global $wpdb;
+        global $wpdb;
 
-    // Delete the main transient
-    delete_transient('ahan_products_ids');
+        // Delete the main transient
+        delete_transient('ahan_products_ids');
 
-    // Delete all transients prefixed with 'ahan_'
-    $wpdb->query(
-        $wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-            '_transient_ahan_%'
-        )
-    );
+        // Delete all transients prefixed with 'ahan_'
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                '_transient_ahan_%'
+            )
+        );
 
-    // Log the deletion
-    $this->log('All transients deleted');
-}
+        $this->log('All transients deleted');
+    }
 
     private function log($message) {
         if (get_option('ahan_price_debug')) {

@@ -15,15 +15,16 @@ jQuery(document).ready(function ($) {
             success: function (response) {
                 if (response.success) {
                     $message.show(); // Show the success message
+                    console.log('Update started successfully.');
                 } else {
-                    alert('ربات با موفقیت اجرا شد');
+                    console.error('Update failed.');
                 }
             },
             error: function () {
-                alert('ربات با موفقیت اجرا شد');
+                console.error('AJAX request failed.');
             },
             complete: function () {
-               // $btn.prop('disabled', false); // Re-enable the button
+                $btn.prop('disabled', false); // Re-enable the button
             },
         });
     });

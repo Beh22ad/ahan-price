@@ -1,17 +1,21 @@
 <?php
+
 namespace AhanPrice\Admin;
 
-class Settings {
+class Settings
+{
     private static $instance = null;
 
-    public static function get_instance() {
+    public static function get_instance()
+    {
         if (null === self::$instance) {
             self::$instance = new self();
         }
         return self::$instance;
     }
 
-    public function __construct() {
+    public function __construct()
+    {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('init', [$this, 'schedule_price_updater']);
@@ -20,7 +24,8 @@ class Settings {
         add_action('wp_ajax_ahan_price_manual_update', [$this, 'manual_update']);
     }
 
-    public function add_admin_menu() {
+    public function add_admin_menu()
+    {
         // Load SVG icon URL
         $icon_url = ahan_price_get_icon();
 
@@ -30,11 +35,12 @@ class Settings {
             'manage_options',
             'ahan-price-settings',
             [$this, 'settings_page'],
-            $icon_url // Use SVG icon for the menu
+            $icon_url
         );
     }
 
-    public function register_settings() {
+    public function register_settings()
+    {
         register_setting('ahan_price_settings', 'ahan_price_key');
         register_setting('ahan_price_settings', 'ahan_price_debug', [
             'type' => 'boolean',
@@ -42,7 +48,8 @@ class Settings {
         ]);
     }
 
-    public function enqueue_scripts($hook) {
+    public function enqueue_scripts($hook)
+    {
         if ($hook === 'toplevel_page_ahan-price-settings') {
             wp_enqueue_script('ahan-price-admin', plugin_dir_url(__DIR__) . '../assets/js/admin.js', ['jquery'], '1.0.0', true);
             wp_localize_script('ahan-price-admin', 'ahan_price_admin', [
@@ -52,8 +59,69 @@ class Settings {
         }
     }
 
-    public function settings_page() {
-        ?>
+    public function settings_page()
+    {
+
+        // check for update
+        $plugin_data = get_file_data(AHAN_PRICE_MAIN_FILE, [
+            "Version" => "Version",
+            "TextDomain" => "Text Domain",
+        ]);
+
+        $namespace = $plugin_data["TextDomain"];
+        $version = $plugin_data["Version"];
+        $license_key = get_option("price_radar_license_key", "");
+
+        // transient key based on namespace
+        $transient_key = $namespace . "_update_response";
+
+        // Try to get cached response
+        $data = get_transient($transient_key);
+
+        if ($data === false) {
+            // No cached response, call API
+            $api_url = add_query_arg(
+                [
+                    "namespace" => $namespace,
+                    "version" => $version,
+                    "license_key" => $license_key,
+                ],
+                "https://mrnargil-updater.spaindoh.workers.dev/",
+            );
+
+            $response = wp_remote_get($api_url, ["timeout" => 10]);
+
+            if (
+                !is_wp_error($response) &&
+                wp_remote_retrieve_response_code($response) === 200
+            ) {
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                // Store in transient for 1 day
+                set_transient($transient_key, $data, DAY_IN_SECONDS);
+            }
+        }
+
+        // If we have data (either cached or fresh), display notice
+        if (!empty($data)) {
+            if (!empty($data["update_available"])) {
+                echo '<div class="notice notice-error is-dismissible"><p>' .
+                    esc_html($data["message"]) .
+                    ' <a href="' .
+                    esc_url($data["download_url"]) .
+                    '" target="_blank">دانلود نسخه ' .
+                    esc_html($data["latest_version"]) .
+                    "</a>" .
+                    "</p></div>";
+            } else {
+                /*
+                echo '<div class="notice notice-success is-dismissible"><p>' .
+                    esc_html($data["message"]) .
+                    "</p></div>";
+                    */
+            }
+        }
+?>
         <div class="wrap">
             <h1>تنظیمات افزونه قیمت آهن</h1>
 
@@ -66,19 +134,19 @@ class Settings {
                         <th scope="row">کلید دسترسی</th>
                         <td>
                             <input type="text" name="ahan_price_key"
-                                   value="<?php echo esc_attr(get_option('ahan_price_key')); ?>"
-                                   class="regular-text">
-                                   <p class="description">
-با استفاده از <a href="https://mrnargil.ir/product/ahan-price-membership/">کلید دسترسی</a> به تمام قیمت‌های ارائه شده دسترسی خواهید داشت
-                        </p>
+                                value="<?php echo esc_attr(get_option('ahan_price_key')); ?>" class="regular-text">
+                            <p class="description">
+                                با استفاده از <a href="https://mrnargil.ir/product/ahan-price-membership/">کلید دسترسی</a> به
+                                تمام قیمت‌های ارائه شده دسترسی خواهید داشت
+                            </p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">فعالسازی حالت دیباگ</th>
                         <td>
                             <label>
-                                <input type="checkbox" name="ahan_price_debug"
-                                       value="1" <?php checked(get_option('ahan_price_debug'), 1); ?>>
+                                <input type="checkbox" name="ahan_price_debug" value="1"
+                                    <?php checked(get_option('ahan_price_debug'), 1); ?>>
                                 فعال کردن حالت دیباگ
                             </label>
                             <p class="description">
@@ -99,19 +167,21 @@ class Settings {
                 ربات دریافت قیمت با موفقیت اجرا شد، چند لحظه صبر کنید سپس قیمت محصولات سایت را چک کنید.
             </p>
         </div>
-        <?php
+<?php
     }
 
-    public function schedule_price_updater() {
-        if ( class_exists( 'ActionScheduler' ) ) {
+    public function schedule_price_updater()
+    {
+        if (class_exists('ActionScheduler')) {
             // Schedule the action to run twice a day if it's not already scheduled
-            if ( ! as_next_scheduled_action( 'ahan_price_daily_update' ) ) {
-                as_schedule_recurring_action( time(), 24 * HOUR_IN_SECONDS, 'ahan_price_daily_update' );
+            if (! as_next_scheduled_action('ahan_price_daily_update')) {
+                as_schedule_recurring_action(time(), 24 * HOUR_IN_SECONDS, 'ahan_price_daily_update');
             }
         }
     }
 
-    public function start_price_update() {
+    public function start_price_update()
+    {
         // Clear the transient to start fresh
         delete_transient('ahan_products_ids');
 
@@ -127,7 +197,8 @@ class Settings {
         ]);
     }
 
-    public function manual_update() {
+    public function manual_update()
+    {
         // Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ahan_price_manual_update_nonce')) {
             wp_send_json_error('Invalid nonce');
@@ -152,7 +223,7 @@ class Settings {
         if (is_wp_error($response)) {
             wp_send_json_error('Request failed: ' . $response->get_error_message());
         } else {
-             wp_send_json_success('Update started');
+            wp_send_json_success('Update started');
         }
     }
 }

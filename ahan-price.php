@@ -23,22 +23,14 @@ if (!defined("AHAN_PRICE_MAIN_FILE")) {
 
 // delete update catch after upgrade
 add_action('upgrader_process_complete', function ($upgrader, $options) {
-    // Only run for plugin updates
-    if ($options['type'] === 'plugin' && !empty($options['plugins'])) {
-        foreach ($options['plugins'] as $plugin) {
-            // Check if our plugin was updated
-            if ($plugin === plugin_basename(AHAN_PRICE_MAIN_FILE)) {
-                // Get namespace from header
-                $plugin_data = get_file_data(AHAN_PRICE_MAIN_FILE, [
-                    'TextDomain' => 'Text Domain',
-                ]);
-                $namespace = $plugin_data['TextDomain'];
+    // Get namespace from header
+    $plugin_data = get_file_data(AHAN_PRICE_MAIN_FILE, [
+        'TextDomain' => 'Text Domain',
+    ]);
+    $namespace = $plugin_data['TextDomain'];
 
-                // Delete transient
-                delete_transient($namespace . '_update_response');
-            }
-        }
-    }
+    // Delete transient
+    delete_transient($namespace . '_update_response');
 }, 10, 2);
 
 // Load SVG icon

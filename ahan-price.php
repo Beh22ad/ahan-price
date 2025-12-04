@@ -13,6 +13,7 @@
 use AhanPrice\Admin\Settings;
 use AhanPrice\Admin\ProductMeta;
 use AhanPrice\PriceUpdater;
+use AhanPrice\Admin\UpdateChecker;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -22,16 +23,8 @@ if (!defined("AHAN_PRICE_MAIN_FILE")) {
 }
 
 // delete update catch after upgrade
-add_action('upgrader_process_complete', function ($upgrader, $options) {
-    // Get namespace from header
-    $plugin_data = get_file_data(AHAN_PRICE_MAIN_FILE, [
-        'TextDomain' => 'Text Domain',
-    ]);
-    $namespace = $plugin_data['TextDomain'];
+UpdateChecker::registerCacheCleaner(AHAN_PRICE_MAIN_FILE);
 
-    // Delete transient
-    delete_transient($namespace . '_update_response');
-}, 10, 2);
 
 // Load SVG icon
 function ahan_price_get_icon()

@@ -63,64 +63,8 @@ class Settings
     {
 
         // check for update
-        $plugin_data = get_file_data(AHAN_PRICE_MAIN_FILE, [
-            "Version" => "Version",
-            "TextDomain" => "Text Domain",
-        ]);
-
-        $namespace = $plugin_data["TextDomain"];
-        $version = $plugin_data["Version"];
-        $license_key = get_option("price_radar_license_key", "");
-
-        // transient key based on namespace
-        $transient_key = $namespace . "_update_response";
-
-        // Try to get cached response
-        $data = get_transient($transient_key);
-
-        if ($data === false) {
-            // No cached response, call API
-            $api_url = add_query_arg(
-                [
-                    "namespace" => $namespace,
-                    "version" => $version,
-                    "license_key" => $license_key,
-                ],
-                "https://mrnargil-updater.spaindoh.workers.dev/",
-            );
-
-            $response = wp_remote_get($api_url, ["timeout" => 10]);
-
-            if (
-                !is_wp_error($response) &&
-                wp_remote_retrieve_response_code($response) === 200
-            ) {
-                $body = wp_remote_retrieve_body($response);
-                $data = json_decode($body, true);
-                // Store in transient for 1 day
-                set_transient($transient_key, $data, DAY_IN_SECONDS);
-            }
-        }
-
-        // If we have data (either cached or fresh), display notice
-        if (!empty($data)) {
-            if (!empty($data["update_available"])) {
-                echo '<div class="notice notice-error is-dismissible"><p>' .
-                    esc_html($data["message"]) .
-                    ' <a href="' .
-                    esc_url($data["download_url"]) .
-                    '" target="_blank">دانلود نسخه ' .
-                    esc_html($data["latest_version"]) .
-                    "</a>" .
-                    "</p></div>";
-            } else {
-                /*
-                echo '<div class="notice notice-success is-dismissible"><p>' .
-                    esc_html($data["message"]) .
-                    "</p></div>";
-                    */
-            }
-        }
+        $license_key = get_option("ahan_price_key", "");
+        echo UpdateChecker::run(AHAN_PRICE_MAIN_FILE, $license_key);
 ?>
         <div class="wrap">
             <h1>تنظیمات افزونه قیمت آهن</h1>

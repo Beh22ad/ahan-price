@@ -1,0 +1,25 @@
+{
+    "name": "mrnargil/ahan-price",
+    "description": "افزونه بروز رسانی اتوماتیک قیمت آهن آلات",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "AhanPrice\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "mrnargil.ir",
+            "email": "info@mrnargil.ir"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "7.4"
+        }
+    }
+}

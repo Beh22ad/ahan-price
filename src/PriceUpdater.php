@@ -24,6 +24,34 @@ class PriceUpdater
         add_action('wp_ajax_nopriv_ahan_price_update_product', [$this, 'update_product']);
     }
 
+    /**
+     * Process a single product by ID (for batch processing)
+     *
+     * @param int $product_id
+     * @return bool True on success, false on failure
+     */
+    public function process_single_product_by_id($product_id)
+    {
+        $product_obj = wc_get_product($product_id);
+
+        if (!$product_obj) {
+            $this->log("Product {$product_id} not found", 'ERROR');
+            return false;
+        }
+
+        try {
+            if ($product_obj->is_type('variable')) {
+                $this->process_variable_product($product_obj);
+            } else {
+                $this->process_single_product($product_obj);
+            }
+            return true;
+        } catch (\Exception $e) {
+            $this->log("Error processing product {$product_id}: " . $e->getMessage(), 'ERROR');
+            return false;
+        }
+    }
+
     public function update_product()
     {
         // Get product IDs from transient
@@ -125,15 +153,6 @@ class PriceUpdater
             $api_helper = ApiHelper::get_instance();
             $api_url = $api_helper->get_api_url($base_code);
 
-            /*
-            $api_key = get_option('ahan_price_key');
-            $network_mode = get_option('ahan_price_network_mode', 'normal');
-            if ($network_mode === 'internal') {
-                $api_url = "https://o.roojino.ir/ahan/api.php?auth={$api_key}&id={$base_code}";
-            } else {
-                $api_url = "https://ahan-price-api.spaindoh.workers.dev/?auth={$api_key}&id={$base_code}";
-            }
-                */
             $this->log("Fetching data from API: {$api_url}");
 
             $response = wp_remote_get($api_url, [
@@ -145,8 +164,6 @@ class PriceUpdater
                 $this->log("API request failed for product {$product_id}: " . $response->get_error_message(), 'ERROR');
                 return;
             }
-
-
 
             $data = wp_remote_retrieve_body($response);
             // Check if response is valid JSON
@@ -246,10 +263,5 @@ class PriceUpdater
     {
         $log = Log::get_instance();
         $log->write($message, $level);
-
-        // Also keep the old error_log for backward compatibility
-        if (get_option('ahan_price_debug')) {
-            // error_log("[Ahan Price Plugin] {$message}");
-        }
     }
 }

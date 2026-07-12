@@ -24,16 +24,11 @@ class Settings
         add_action('init', [$this, 'schedule_price_updater']);
         add_action('ahan_price_daily_update', [$this, 'start_price_update']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
-        add_action('wp_ajax_ahan_price_manual_update', [$this, 'manual_update']);
-        add_action('wp_ajax_ahan_price_delete_log', [$this, 'delete_log']);
-        add_action('wp_ajax_ahan_price_download_log', [$this, 'download_log']);
-        add_action('wp_ajax_ahan_price_retry_license_check', [$this, 'retry_license_check']);
         add_action('update_option_ahan_price_key', [$this, 'on_license_key_changed'], 10, 2);
     }
 
     public function add_admin_menu()
     {
-        // Load SVG icon URL
         $icon_url = ahan_price_get_icon();
 
         add_menu_page(
@@ -67,6 +62,7 @@ class Settings
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce'    => wp_create_nonce('ahan_price_manual_update_nonce'),
                 'delete_log_nonce' => wp_create_nonce('ahan_price_delete_log'),
+                'batch_nonce' => wp_create_nonce('ahan_price_batch_update'),
                 'download_log_url' => add_query_arg([
                     'action' => 'ahan_price_download_log',
                     'nonce'  => wp_create_nonce('ahan_price_download_log'),
@@ -212,6 +208,31 @@ class Settings
                 border: 1px solid #f5c6cb;
                 color: #721c24;
             }
+
+            /* Progress bar styles */
+            #ahan-progress-container {
+                margin-top: 20px !important;
+                padding: 15px !important;
+                background: #f0f8ff !important;
+                border: 2px solid #2271b1 !important;
+                border-radius: 8px !important;
+            }
+
+            #ahan-progress-bar {
+                transition: width 0.5s ease !important;
+                background: linear-gradient(90deg, #4CAF50, #45a049) !important;
+                border-radius: 14px !important;
+            }
+
+            #ahan-progress-text {
+                font-weight: bold;
+                color: #2271b1;
+            }
+
+            #ahan-cancel-update:hover {
+                background: #f8d7da !important;
+                border-color: #d63638 !important;
+            }
         </style>
 <?php
     }
@@ -219,7 +240,6 @@ class Settings
     public function schedule_price_updater()
     {
         if (class_exists('ActionScheduler')) {
-            // Schedule the action to run twice a day if it's not already scheduled
             if (! as_next_scheduled_action('ahan_price_daily_update')) {
                 as_schedule_recurring_action(time(), 24 * HOUR_IN_SECONDS, 'ahan_price_daily_update');
             }
@@ -228,10 +248,6 @@ class Settings
 
     public function start_price_update()
     {
-        // Clear the transient to start fresh
-        //delete_transient('ahan_products_ids');
-
-        // Trigger the first AJAX request to start the update process
         wp_remote_post(admin_url('admin-ajax.php'), [
             'blocking' => false,
             'sslverify' => false,
@@ -243,43 +259,231 @@ class Settings
         ]);
     }
 
+    // STATIC AJAX HANDLERS
+    public static function handle_manual_update()
+    {
+        $instance = self::get_instance();
+        $instance->manual_update();
+    }
+
+    public static function handle_update_batch()
+    {
+        $instance = self::get_instance();
+        $instance->update_batch();
+    }
+
+    public static function handle_get_progress()
+    {
+        $instance = self::get_instance();
+        $instance->get_progress();
+    }
+
+    public static function handle_cancel_update()
+    {
+        $instance = self::get_instance();
+        $instance->cancel_update();
+    }
+
+    public static function handle_delete_log()
+    {
+        $instance = self::get_instance();
+        $instance->delete_log();
+    }
+
+    public static function handle_retry_license()
+    {
+        $instance = self::get_instance();
+        $instance->retry_license_check();
+    }
+
     public function manual_update()
     {
-        // Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ahan_price_manual_update_nonce')) {
             wp_send_json_error('Invalid nonce');
         }
 
-        // Clear the transient to start fresh
-        //delete_transient('ahan_products_ids');
-
-        // Trigger the first AJAX request to start the update process
-        $response = wp_remote_post(admin_url('admin-ajax.php'), [
-            'blocking' => true,
-            'sslverify' => false,
-            'headers' => array('X-Requested-With' => 'XMLHttpRequest'),
-            'body' => [
-                'action' => 'ahan_price_update_product',
-                '_ajax_nonce' => wp_create_nonce('ahan_price'),
-            ],
-        ]);
-
-        // Debug the response:
-        if (is_wp_error($response)) {
-            wp_send_json_error('Request failed: ' . $response->get_error_message());
-        } else {
-            wp_send_json_success('Update started');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
         }
+
+        $this->cleanup_update_session();
+
+        wp_send_json_success('Update started successfully');
+    }
+
+    public function update_batch()
+    {
+        check_ajax_referer('ahan_price_batch_update', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $batch_size = apply_filters('ahan_price_batch_size', 5);
+        $product_ids = get_transient('ahan_products_ids_batch');
+
+        if (false === $product_ids) {
+            $product_ids = get_posts([
+                'post_type'      => 'product',
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'meta_query'     => [
+                    [
+                        'key'   => '_ahan_auto_update',
+                        'value' => 'yes',
+                    ],
+                ],
+            ]);
+
+            if (empty($product_ids)) {
+                wp_send_json_success([
+                    'completed' => true,
+                    'total' => 0,
+                    'processed' => 0,
+                    'success_count' => 0,
+                    'error_count' => 0,
+                    'percentage' => 0,
+                    'message' => 'No products to update'
+                ]);
+            }
+
+            set_transient('ahan_products_ids_batch', $product_ids, HOUR_IN_SECONDS);
+            set_transient('ahan_update_progress', [
+                'total' => count($product_ids),
+                'processed' => 0,
+                'success_count' => 0,
+                'error_count' => 0,
+                'status' => 'running',
+                'started_at' => time(),
+            ], HOUR_IN_SECONDS);
+        }
+
+        $progress = get_transient('ahan_update_progress');
+
+        if (!$progress) {
+            wp_send_json_error('Progress data not found');
+        }
+
+        $remaining = array_slice($product_ids, $progress['processed'], $batch_size);
+
+        if (empty($remaining)) {
+            $this->cleanup_update_session();
+            wp_send_json_success([
+                'completed' => true,
+                'total' => $progress['total'],
+                'processed' => $progress['processed'],
+                'success_count' => $progress['success_count'],
+                'error_count' => $progress['error_count'],
+                'percentage' => 100,
+                'message' => 'All products updated successfully!'
+            ]);
+        }
+
+        $batch_success = 0;
+        $batch_error = 0;
+
+        foreach ($remaining as $product_id) {
+            try {
+                $price_updater = \AhanPrice\PriceUpdater::get_instance();
+                $result = $price_updater->process_single_product_by_id($product_id);
+
+                if ($result) {
+                    $batch_success++;
+                } else {
+                    $batch_error++;
+                }
+            } catch (\Exception $e) {
+                $batch_error++;
+                $log = Log::get_instance();
+                $log->write("Error processing product {$product_id}: " . $e->getMessage(), 'ERROR');
+            }
+
+            $progress['processed']++;
+        }
+
+        $progress['success_count'] = ($progress['success_count'] ?? 0) + $batch_success;
+        $progress['error_count'] = ($progress['error_count'] ?? 0) + $batch_error;
+
+        set_transient('ahan_update_progress', $progress, HOUR_IN_SECONDS);
+
+        $completed = $progress['processed'] >= $progress['total'];
+
+        if ($completed) {
+            $this->cleanup_update_session();
+        }
+
+        wp_send_json_success([
+            'completed' => $completed,
+            'total' => $progress['total'],
+            'processed' => $progress['processed'],
+            'success_count' => $progress['success_count'],
+            'error_count' => $progress['error_count'],
+            'percentage' => $progress['total'] > 0 ? round(($progress['processed'] / $progress['total']) * 100, 2) : 0,
+            'message' => $completed ? 'All products updated successfully!' : 'Batch processed successfully'
+        ]);
+    }
+
+    public function get_progress()
+    {
+        check_ajax_referer('ahan_price_batch_update', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $progress = get_transient('ahan_update_progress');
+
+        if (false === $progress) {
+            wp_send_json_success([
+                'status' => 'idle',
+                'total' => 0,
+                'processed' => 0,
+                'success_count' => 0,
+                'error_count' => 0,
+                'percentage' => 0,
+            ]);
+        }
+
+        $percentage = $progress['total'] > 0
+            ? round(($progress['processed'] / $progress['total']) * 100, 2)
+            : 0;
+
+        wp_send_json_success([
+            'status' => $progress['status'] ?? 'running',
+            'total' => $progress['total'],
+            'processed' => $progress['processed'],
+            'success_count' => $progress['success_count'] ?? 0,
+            'error_count' => $progress['error_count'] ?? 0,
+            'percentage' => $percentage,
+            'started_at' => $progress['started_at'] ?? null,
+        ]);
+    }
+
+    public function cancel_update()
+    {
+        check_ajax_referer('ahan_price_batch_update', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $this->cleanup_update_session();
+
+        wp_send_json_success('Update cancelled successfully');
+    }
+
+    private function cleanup_update_session()
+    {
+        delete_transient('ahan_products_ids_batch');
+        delete_transient('ahan_update_progress');
     }
 
     public function download_log()
     {
-        // Verify nonce
         if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'ahan_price_download_log')) {
             wp_die('درخواست نامعتبر - Invalid nonce');
         }
 
-        // Check user capabilities
         if (!current_user_can('manage_options')) {
             wp_die('دسترسی غیرمجاز - Unauthorized');
         }
@@ -296,7 +500,6 @@ class Settings
             wp_die('فایل لاگ قابل خواندن نیست - Log file is not readable');
         }
 
-        // Set headers for download
         nocache_headers();
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="ahan-price-log-' . date('Y-m-d-H-i-s') . '.log"');
@@ -305,24 +508,20 @@ class Settings
         header('Pragma: no-cache');
         header('Expires: 0');
 
-        // Clear any output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        // Output file
         readfile($file_path);
         exit;
     }
 
     public function delete_log()
     {
-        // Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ahan_price_delete_log')) {
             wp_send_json_error('درخواست نامعتبر');
         }
 
-        // Check user capabilities
         if (!current_user_can('manage_options')) {
             wp_send_json_error('دسترسی غیرمجاز');
         }
@@ -350,9 +549,6 @@ class Settings
         wp_send_json_success('Cache cleared');
     }
 
-    /**
-     * Clear license cache when license key is changed
-     */
     public function on_license_key_changed($old_value, $new_value)
     {
         if ($old_value !== $new_value) {

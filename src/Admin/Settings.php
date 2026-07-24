@@ -296,6 +296,12 @@ class Settings
         $instance->retry_license_check();
     }
 
+    public static function handle_download_log()
+    {
+        $instance = self::get_instance();
+        $instance->download_log();
+    }
+
     public function manual_update()
     {
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ahan_price_manual_update_nonce')) {
@@ -480,10 +486,12 @@ class Settings
 
     public function download_log()
     {
+        // Verify nonce
         if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'ahan_price_download_log')) {
             wp_die('درخواست نامعتبر - Invalid nonce');
         }
 
+        // Check user capabilities
         if (!current_user_can('manage_options')) {
             wp_die('دسترسی غیرمجاز - Unauthorized');
         }
@@ -500,18 +508,22 @@ class Settings
             wp_die('فایل لاگ قابل خواندن نیست - Log file is not readable');
         }
 
-        nocache_headers();
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="ahan-price-log-' . date('Y-m-d-H-i-s') . '.log"');
-        header('Content-Length: ' . filesize($file_path));
-        header('Content-Transfer-Encoding: binary');
-        header('Pragma: no-cache');
-        header('Expires: 0');
-
+        // Clear all output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
 
+        // Set headers for download
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="ahan-price-log-' . date('Y-m-d-H-i-s') . '.log"');
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file_path));
+
+        // Output file
         readfile($file_path);
         exit;
     }

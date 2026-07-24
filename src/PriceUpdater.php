@@ -179,6 +179,7 @@ class PriceUpdater
         $data = json_decode($data, true);
         if (!isset($data['status']) || $data['status'] !== 'ok') {
             $this->log("API response status is not OK for product {$product_id}", 'ERROR');
+            $this->log(print_r($data, true), 'ERROR');
             return;
         }
 

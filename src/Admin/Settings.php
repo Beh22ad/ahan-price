@@ -233,6 +233,10 @@ class Settings
                 background: #f8d7da !important;
                 border-color: #d63638 !important;
             }
+
+            .ahan-log-management .dashicons {
+                line-height: 1 !important;
+            }
         </style>
 <?php
     }

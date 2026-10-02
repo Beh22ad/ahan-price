@@ -4,7 +4,7 @@
  * Plugin Name: قیمت آهن 
  * Plugin URI:
  * Description: مدیریت اتوماتیک قیمت آهن
- * Version: 2.3.2
+ * Version: 2.3.3
  * Author: mrnargil.ir
  * Author URI: https://mrnargil.ir
  * Text Domain: ahan-price

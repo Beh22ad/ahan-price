@@ -1,0 +1,312 @@
+/* ============================================
+   Ahan Price — Modern Admin Settings Styles
+   ============================================ */
+
+/* ---- Base wrapper ---- */
+.ahan-price-settings {
+    max-width: 900px;
+    margin-top: 20px;
+}
+
+.ahan-price-settings h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1d2327;
+    margin-bottom: 20px;
+}
+
+/* ---- Modern tab navigation ---- */
+.ahan-price-settings .nav-tab-wrapper {
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 4px;
+}
+
+.ahan-price-settings .nav-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #50575e;
+    border-radius: 6px 6px 0 0;
+    margin-left: 0;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+}
+
+.ahan-price-settings .nav-tab:hover {
+    background: #f0f0f1;
+    color: #1d2327;
+}
+
+.ahan-price-settings .nav-tab-active {
+    background: transparent;
+    border-bottom: 3px solid #2271b1;
+    color: #2271b1;
+    font-weight: 600;
+}
+
+/* ---- Card-style form sections ---- */
+.ahan-price-settings .form-table {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 4px 20px 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
+}
+
+.ahan-price-settings .form-table tr {
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ahan-price-settings .form-table tr:last-child {
+    border-bottom: none;
+}
+
+.ahan-price-settings .form-table th {
+    padding: 18px 10px 18px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    width: 180px;
+}
+
+.ahan-price-settings .form-table td {
+    padding: 18px 0;
+}
+
+.ahan-price-settings .form-table input[type="text"],
+.ahan-price-settings .form-table select {
+    border: 1px solid #ccd0d4;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 40px;
+    box-shadow: 0 0 0 transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ahan-price-settings .form-table input[type="text"]:focus,
+.ahan-price-settings .form-table select:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.15);
+    outline: none;
+}
+
+.ahan-price-settings .form-table .description {
+    color: #646970;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 8px;
+}
+
+.ahan-price-settings .form-table .description a {
+    color: #2271b1;
+    text-decoration: none;
+}
+
+.ahan-price-settings .form-table .description a:hover {
+    text-decoration: underline;
+}
+
+/* ---- Submit button ---- */
+.ahan-price-settings .submit {
+    padding: 0;
+    margin: 10px 0 30px;
+}
+
+.ahan-price-settings .button-primary {
+    background: #2271b1;
+    border-color: #2271b1;
+    border-radius: 6px;
+    padding: 6px 20px;
+    height: auto;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: all 0.15s ease;
+}
+
+.ahan-price-settings .button-primary:hover {
+    background: #135e96;
+    border-color: #135e96;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.ahan-price-settings .button-secondary {
+    border-radius: 6px;
+    padding: 6px 16px;
+    height: auto;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid #ccd0d4;
+    background: #f6f7f7;
+    color: #2271b1;
+    transition: all 0.15s ease;
+}
+
+.ahan-price-settings .button-secondary:hover {
+    background: #f0f0f1;
+    border-color: #2271b1;
+    color: #135e96;
+}
+
+/* ---- Log management card ---- */
+.ahan-log-management {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-top: 16px;
+}
+
+.ahan-log-management p {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.ahan-log-management p:last-child {
+    margin-bottom: 0;
+}
+
+.ahan-log-management .dashicons {
+    line-height: 1 !important;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.ahan-log-management .button-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+}
+
+.ahan-log-size {
+    margin-top: 12px !important;
+    font-size: 13px;
+    color: #646970;
+}
+
+.ahan-delete-log-btn {
+    color: #a00 !important;
+    margin-right: 10px;
+}
+
+.ahan-delete-log-btn:hover {
+    color: #dc3232 !important;
+    border-color: #dc3232 !important;
+}
+
+/* ---- Log action message ---- */
+#ahan-log-message {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#ahan-log-message.notice-success {
+    background: #edfaef;
+    border: 1px solid #b8e6bf;
+    color: #1a7a2e;
+}
+
+#ahan-log-message.notice-error {
+    background: #fcf0f1;
+    border: 1px solid #f1b0b7;
+    color: #8a1f1f;
+}
+
+/* ---- License result area ---- */
+#ahan-license-result {
+    margin-top: 16px;
+}
+
+#ahan-license-result .notice {
+    border-radius: 6px;
+    border-left-width: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ---- Update description ---- */
+.ahan-update-description {
+    color: #646970;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 20px !important;
+    max-width: 700px;
+}
+
+/* ---- Progress bar ---- */
+#ahan-progress-container {
+    margin-top: 24px !important;
+    padding: 20px !important;
+    background: #f0f6fc !important;
+    border: 1px solid #c5d9ed !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+#ahan-progress-bar {
+    transition: width 0.4s ease !important;
+    background: linear-gradient(90deg, #2271b1, #135e96) !important;
+    border-radius: 14px !important;
+}
+
+#ahan-progress-text {
+    font-weight: 600;
+    color: #2271b1;
+    font-size: 15px;
+}
+
+#ahan-progress-detail {
+    color: #50575e;
+}
+
+#ahan-cancel-update {
+    color: #d63638 !important;
+    border-color: #d63638 !important;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+#ahan-cancel-update:hover {
+    background: #fcf0f1 !important;
+    border-color: #d63638 !important;
+}
+
+/* ---- Utility ---- */
+.ahan-hidden {
+    display: none !important;
+}
+
+/* ---- Responsive ---- */
+@media screen and (max-width: 782px) {
+    .ahan-price-settings .nav-tab-wrapper {
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+
+    .ahan-price-settings .nav-tab {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .ahan-price-settings .form-table th {
+        width: auto;
+        display: block;
+        padding-bottom: 4px;
+    }
+
+    .ahan-price-settings .form-table td {
+        display: block;
+        padding-top: 4px;
+    }
+}

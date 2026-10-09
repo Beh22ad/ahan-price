@@ -5,6 +5,8 @@ namespace AhanPrice\Admin;
 class ApiHelper
 {
     private static $instance = null;
+    const INTERNAL_URL = "https://o.roojino.ir/ahan";
+    const EXTERNAL_URL = "https://ahan-price-api.spaindoh.workers.dev/";
 
     public static function get_instance()
     {
@@ -26,9 +28,9 @@ class ApiHelper
         $network_mode = get_option('ahan_price_network_mode', 'normal');
 
         if ($network_mode === 'internal') {
-            $url = "https://o.roojino.ir/ahan/api.php";
+            $url = self::INTERNAL_URL;
         } else {
-            $url = "https://ahan-price-api.spaindoh.workers.dev/";
+            $url = self::EXTERNAL_URL;
         }
 
         $params = [];
@@ -51,9 +53,9 @@ class ApiHelper
         $network_mode = get_option('ahan_price_network_mode', 'normal');
 
         if ($network_mode === 'internal') {
-            $url = "https://o.roojino.ir/ahan/api.php";
+            $url = self::INTERNAL_URL;
         } else {
-            $url = "https://ahan-price-api.spaindoh.workers.dev/";
+            $url = self::EXTERNAL_URL;
         }
 
         $params = [];

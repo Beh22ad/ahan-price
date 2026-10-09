@@ -8,23 +8,22 @@ class UpdateChecker
 
     public static function run($plugin_file, $license_key)
     {
-        // Don't check for updates if internal network mode is selected
-        $network_mode = get_option('ahan_price_network_mode', 'normal');
-        if ($network_mode === 'internal') {
+        // Only run on the plugin's own settings page (and its tabs).
+        if (!self::is_settings_page()) {
             return '';
         }
 
         self::$plugin_file = $plugin_file;
 
         $plugin_data = get_file_data($plugin_file, [
-            "Version" => "Version",
+            "Version"    => "Version",
             "TextDomain" => "Text Domain",
         ]);
 
         $namespace = $plugin_data["TextDomain"];
-        $version = $plugin_data["Version"];
+        $version   = $plugin_data["Version"];
 
-        // transient key based on namespace
+        // Transient key based on namespace
         $transient_key = $namespace . "_update_response";
 
         // Try to get cached response
@@ -34,15 +33,15 @@ class UpdateChecker
             // No cached response, call API
             $api_url = add_query_arg(
                 [
-                    "namespace" => $namespace,
-                    "version" => $version,
+                    "namespace"   => $namespace,
+                    "version"     => $version,
                     "license_key" => $license_key,
-                    "site" => site_url(),
+                    "site"        => site_url(),
                 ],
-                "https://mrnargil-updater.spaindoh.workers.dev/",
+                "https://mrnargil-updater.spaindoh.workers.dev/"
             );
 
-            $response = wp_remote_get($api_url, ["timeout" => 10]);
+            $response = wp_remote_get($api_url, ["timeout" => 3]);
 
             if (
                 !is_wp_error($response) &&
@@ -51,7 +50,7 @@ class UpdateChecker
                 $body = wp_remote_retrieve_body($response);
                 $data = json_decode($body, true);
 
-                // Store in transient for 3 HOUR
+                // Store in transient for 3 HOURS
                 set_transient($transient_key, $data, 3 * HOUR_IN_SECONDS);
             }
         }
@@ -67,15 +66,24 @@ class UpdateChecker
                     esc_html($data["latest_version"]) .
                     "</a>" .
                     "</p></div>";
-            } else {
-                return;
-                /*
-                echo '<div class="notice notice-success is-dismissible"><p>' .
-                    esc_html($data["message"]) .
-                    "</p></div>";
-                    */
             }
         }
+
+        return '';
+    }
+
+    /**
+     * Only run the update check on the plugin's own admin page.
+     */
+    private static function is_settings_page()
+    {
+        if (!is_admin()) {
+            return false;
+        }
+
+        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+
+        return $page === 'ahan-price-settings';
     }
 
     public static function registerCacheCleaner($plugin_file)

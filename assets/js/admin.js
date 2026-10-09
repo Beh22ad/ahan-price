@@ -33,13 +33,13 @@ jQuery(document).ready(function ($) {
                     }, 500);
                 } else {
                     $message.html('خطا: ' + (response.data || 'Unknown error')).show();
-                    $btn.prop('disabled', false).text('اجرای ربات');
+                    $btn.prop('disabled', false).text('شروع آپدیت قیمت‌ها');
                 }
             },
             error: function (xhr, status, error) {
                 console.error('AJAX Error:', status, error);
                 $message.html('خطا در ارتباط با سرور: ' + error).show();
-                $btn.prop('disabled', false).text('اجرای ربات');
+                $btn.prop('disabled', false).text('شروع آپدیت قیمت‌ها');
             }
         });
     });
@@ -60,7 +60,7 @@ jQuery(document).ready(function ($) {
             success: function () {
                 stopProgressTracking();
                 $('#ahan-price-update-message').html('بروزرسانی لغو شد').show();
-                $('#ahan-price-manual-update').prop('disabled', false).text('اجرای ربات');
+                $('#ahan-price-manual-update').prop('disabled', false).text('شروع آپدیت قیمت‌ها');
                 $('#ahan-progress-container').remove();
                 isUpdating = false;
             }
@@ -84,6 +84,37 @@ jQuery(document).ready(function ($) {
             },
             error: function() {
                 location.reload();
+            }
+        });
+    });
+
+    // On-demand: check license / API availability
+    $(document).on('click', '#ahan-check-license-btn', function () {
+        var $btn = $(this);
+        var $result = $('#ahan-license-result');
+
+        $btn.prop('disabled', true).text('در حال بررسی...');
+        $result.html('');
+
+        $.ajax({
+            url: ahan_price_admin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'ahan_price_check_license',
+                nonce: ahan_price_admin.check_license_nonce,
+            },
+            success: function (response) {
+                if (response && response.success) {
+                    $result.html(response.data);
+                } else {
+                    $result.html('<div class="notice notice-error"><p>خطا در بررسی وضعیت اتصال</p></div>');
+                }
+            },
+            error: function () {
+                $result.html('<div class="notice notice-error"><p>خطا در ارتباط با سرور</p></div>');
+            },
+            complete: function () {
+                $btn.prop('disabled', false).text('بررسی وضعیت اتصال');
             }
         });
     });
@@ -234,7 +265,7 @@ jQuery(document).ready(function ($) {
 
         $('#ahan-price-manual-update')
             .prop('disabled', false)
-            .text('اجرای ربات');
+            .text('شروع آپدیت قیمت‌ها');
 
         // Keep progress bar visible then remove
         setTimeout(function() {
@@ -261,7 +292,7 @@ jQuery(document).ready(function ($) {
 
         $('#ahan-price-manual-update')
             .prop('disabled', false)
-            .text('اجرای ربات');
+            .text('شروع آپدیت قیمت‌ها');
 
         setTimeout(function() {
             $('#ahan-progress-container').fadeOut(500, function() {

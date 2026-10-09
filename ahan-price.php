@@ -4,7 +4,7 @@
  * Plugin Name: قیمت آهن 
  * Plugin URI:
  * Description: مدیریت اتوماتیک قیمت آهن
- * Version: 2.3.3
+ * Version: 2.3.4
  * Author: mrnargil.ir
  * Author URI: https://mrnargil.ir
  * Text Domain: ahan-price
@@ -48,7 +48,8 @@ add_action('init', function () {
     add_action('wp_ajax_ahan_price_cancel_update', ['AhanPrice\Admin\Settings', 'handle_cancel_update']);
     add_action('wp_ajax_ahan_price_delete_log', ['AhanPrice\Admin\Settings', 'handle_delete_log']);
     add_action('wp_ajax_ahan_price_retry_license_check', ['AhanPrice\Admin\Settings', 'handle_retry_license']);
-    add_action('wp_ajax_ahan_price_download_log', ['AhanPrice\Admin\Settings', 'handle_download_log']); // ADD THIS LINE
+    add_action('wp_ajax_ahan_price_download_log', ['AhanPrice\Admin\Settings', 'handle_download_log']);
+    add_action('wp_ajax_ahan_price_check_license', ['AhanPrice\Admin\Settings', 'handle_check_license']);
 });
 
 // Register deactivation hook

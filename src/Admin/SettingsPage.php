@@ -52,12 +52,12 @@ class SettingsPage
 
             <table class="form-table">
                 <tr>
-                    <th scope="row">نقطه اتصال</th>
+                    <th scope="row">کلید لایسنس</th>
                     <td>
                         <input type="text" name="ahan_price_key" value="<?php echo esc_attr(get_option('ahan_price_key')); ?>"
                             class="regular-text">
                         <p class="description">
-                            با استفاده از <a href="https://mrnargil.ir/product/ahan-price-membership/">کلید دسترسی</a>
+                            با استفاده از <a href="https://mrnargil.ir/product/ahan-price-membership/">کلید لایسنس</a>
                             به تمام قیمت‌های ارائه شده دسترسی خواهید داشت
                         </p>
                     </td>
@@ -84,13 +84,13 @@ class SettingsPage
 
         <hr>
 
-        <h2>بررسی وضعیت اتصال</h2>
+        <h2>بررسی وضعیت لایسنس</h2>
         <p class="description">
-            برای بررسی صحت کلید دسترسی و در دسترس بودن سرور، روی دکمه زیر کلیک کنید.
+            برای بررسی صحت کلید لایسنس و در دسترس بودن سرور، روی دکمه زیر کلیک کنید.
         </p>
         <p>
             <button type="button" id="ahan-check-license-btn" class="button button-secondary">
-                بررسی وضعیت اتصال
+                بررسی
             </button>
         </p>
         <div id="ahan-license-result"></div>

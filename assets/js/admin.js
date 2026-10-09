@@ -114,7 +114,7 @@ jQuery(document).ready(function ($) {
                 $result.html('<div class="notice notice-error"><p>خطا در ارتباط با سرور</p></div>');
             },
             complete: function () {
-                $btn.prop('disabled', false).text('بررسی وضعیت اتصال');
+                $btn.prop('disabled', false).text('بررسی دوباره');
             }
         });
     });
